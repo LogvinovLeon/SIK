@@ -213,7 +213,7 @@ void MDNSDiscoverer::getIP() {
         if (ifa->ifa_addr->sa_family == AF_INET) {
             sa = (struct sockaddr_in *) ifa->ifa_addr;
             addr = inet_ntoa(sa->sin_addr);
-            if (strcmp(ifa->ifa_name, "usb0") == 0) {
+            if (strcmp(ifa->ifa_name, "eth0") == 0) {
                 IP = boost::asio::ip::address_v4::from_string(addr);
                 cout << IP.to_string() << endl;
             }
