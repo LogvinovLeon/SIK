@@ -43,7 +43,11 @@ public:
     }
 
     void sendHandler(boost::system::error_code ec) {
-        assert(!ec);
+        if (!ec) {
+
+        } else {
+            cerr << ec.message() << endl;
+        }
     }
 
     void startReceive() {
@@ -55,16 +59,18 @@ public:
     }
 
     void handle_receive(std::size_t length) {
-        reply_buffer.commit(length);
-        std::istream is(&reply_buffer);
-        IPv4Header ipv4_hdr;
-        ICMPHeader icmp_hdr;
-        is >> ipv4_hdr >> icmp_hdr;
-        if (is && icmp_hdr.type() == ICMPHeader::echo_reply
-            && icmp_hdr.identifier() == get_identifier()
-            && icmp_hdr.sequence_number() == sequence_number) {
-            posix_time::ptime now = getTime();
-            delays.push_back((now - time_sent).total_microseconds());
+        if (length) {
+            reply_buffer.commit(length);
+            std::istream is(&reply_buffer);
+            IPv4Header ipv4_hdr;
+            ICMPHeader icmp_hdr;
+            is >> ipv4_hdr >> icmp_hdr;
+            if (is && icmp_hdr.type() == ICMPHeader::echo_reply
+                && icmp_hdr.identifier() == get_identifier()
+                && icmp_hdr.sequence_number() == sequence_number) {
+                posix_time::ptime now = getTime();
+                delays.push_back((now - time_sent).total_microseconds());
+            }
         }
         startReceive();
     }

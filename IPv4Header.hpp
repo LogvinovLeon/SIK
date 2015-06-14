@@ -91,10 +91,12 @@ public:
         if (header.version() != 4)
             is.setstate(std::ios::failbit);
         std::streamsize options_length = header.header_length() - 20;
-        if (options_length < 0 || options_length > 40)
+        if (options_length < 0 || options_length > 40) {
             is.setstate(std::ios::failbit);
-        else
+        }
+        else {
             is.read(reinterpret_cast<char *>(header.rep_) + 20, options_length);
+        }
         return is;
     }
 

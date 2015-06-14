@@ -59,7 +59,7 @@ void MDNSDiscoverer::receive_handler(const boost::system::error_code &error, siz
             std::istream is(&response_buf);
             mdns_package package;
             is >> package;
-            cout << package << endl;
+            cout << package.toString() << endl;
             process(package);
         } catch (const char *e) {
             cerr << e << endl;
@@ -151,7 +151,9 @@ void MDNSDiscoverer::consume_responses(const mdns_package &package) {
     mdns_package mdnsPackage(mdns_header(mdns_header::query));
     for (auto it: PTRrecords) {
         if (it.second > boost::posix_time::microsec_clock::universal_time()) {
-            std::map<mdns_domain, std::pair<ba::ip::address_v4, boost::posix_time::ptime>>::iterator i;
+            std::map<mdns_domain, std::pair<ba::ip::address_v4, boost::posix_time::ptime>>
+            ::iterator
+                    i;
             i = Arecords.find(it.first);
             if (i == Arecords.end()) {
                 mdnsPackage.addQuery(mdns_query(it.first, mdns_query::QTYPE_A));
@@ -198,6 +200,8 @@ void MDNSDiscoverer::getIP() {
                     char addressBuffer[INET_ADDRSTRLEN];
                     inet_ntop(AF_INET, tmpAddrPtr, addressBuffer, INET_ADDRSTRLEN);
                     printf("%s IP Address %s\n", ifa->ifa_name, addressBuffer);
+                    IP = boost::asio::ip::address_v4::from_string(addressBuffer);
+                    cout << IP.to_string() << endl;
                 }
             }
         }

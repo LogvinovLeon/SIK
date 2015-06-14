@@ -39,13 +39,16 @@ private:
     udp::endpoint sender_endpoint;
 
     void sendHandler(boost::system::error_code ec) {
-        assert(!ec);
-        socket_.async_receive_from(boost::asio::buffer(data, max_length),
-                                   sender_endpoint,
-                                   boost::bind(&UDPMeasurer::receiveHandler,
-                                               this,
-                                               boost::asio::placeholders::error,
-                                               boost::asio::placeholders::bytes_transferred));
+        if (!ec) {
+            socket_.async_receive_from(boost::asio::buffer(data, max_length),
+                                       sender_endpoint,
+                                       boost::bind(&UDPMeasurer::receiveHandler,
+                                                   this,
+                                                   boost::asio::placeholders::error,
+                                                   boost::asio::placeholders::bytes_transferred));
+        } else {
+            cerr << ec.message() << endl;
+        }
     }
 
     void receiveHandler(boost::system::error_code ec, size_t bytes) {

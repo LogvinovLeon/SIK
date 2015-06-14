@@ -79,11 +79,15 @@ public:
     }
 
     friend std::ostream &operator<<(std::ostream &os, mdns_header &header) {
-//        for (size_t i = 0; i < HEADER_LENGTH; ++i) {
-//            os << (int) header.rep_[i] << " ";
-//        }
-//        return os;
         return os.write(reinterpret_cast<const char *>(header.rep_), HEADER_LENGTH);
+    }
+
+    string toString() {
+        stringstream os;
+        for (size_t i = 0; i < HEADER_LENGTH; ++i) {
+            os << std::hex << (int) rep_[i] << " ";
+        }
+        return os.str();
     }
 
 private:
@@ -134,12 +138,16 @@ public:
     }
 
     friend std::ostream &operator<<(std::ostream &os, const mdns_domain &domain) {
-//        for (int i = 0; i < domain.parts.size(); ++i) {
-//            mdns_domain::writeString(os, domain.parts[i]);
-//        }
-//        return os;
         os.write(reinterpret_cast<char *>(domain.getData().data()), domain.getLength());
         return os;
+    }
+
+    string toString() {
+        stringstream os;
+        for (int i = 0; i < parts.size(); ++i) {
+            mdns_domain::writeString(os, parts[i]);
+        }
+        return os.str();
     }
 
     string getName() const {
@@ -248,29 +256,45 @@ public:
         is.get((char *) qtype_, 3);
         is.get((char *) qclass_, 3);
         base.setQtype(be16toh(qtype_[0]));
-        base.setQclass(be16toh(qtype_[0]));
-        base.setReplyType(be16toh(qtype_[0]));
+        base.setQclass(be16toh(qclass_[0]));
+        base.setReplyType(be16toh(qclass_[0]));
         return is;
     }
 
     friend std::ostream &operator<<(std::ostream &os, mdns_query_base &base) {
-//        if (base.getQtype() == mdns_query_base::QTYPE_A) {
-//            os << ":A";
-//        } else if (base.getQtype() == mdns_query_base::QTYPE_PTR) {
-//            os << ":PTR";
-//        } else if (base.getQtype() == mdns_query_base::QTYPE_SRV) {
-//            os << ":SRV";
-//        } else if (base.getQtype() == mdns_query_base::QTYPE_ALL) {
-//            os << ":ALL";
-//        } else {
-//            os << ":" << base.getQtype();
-//        }
-//        return os << ":" << base.getQclass() << ":" << (int) base.getReplyType();
         unsigned short qtype[1] = {htobe16(base.qtype)};
         unsigned short qclass[1] = {htobe16(base.qclass)};
         os.write((const char *) qtype, 2);
         os.write((const char *) qclass, 2);
         return os;
+    }
+
+    virtual string toStringBase() {
+        stringstream os;
+        os << ":";
+        if (getQtype() == mdns_query_base::QTYPE_A) {
+            os << "A";
+        } else if (getQtype() == mdns_query_base::QTYPE_PTR) {
+            os << "PTR";
+        } else if (getQtype() == mdns_query_base::QTYPE_SRV) {
+            os << "SRV";
+        } else if (getQtype() == mdns_query_base::QTYPE_ALL) {
+            os << "ALL";
+        } else if (getQtype() == mdns_query_base::QTYPE_TXT) {
+            os << "TXT";
+        } else {
+            os << getQtype();
+        }
+        os << ":";
+        if (getQclass() == mdns_query_base::QCLASS_INTERNET) {
+            os << "INT";
+        } else if (getQclass() == mdns_query_base::QCLASS_ANY) {
+            os << "ANY";
+        } else {
+            os << getQclass();
+        }
+        os << ":" << (int) getReplyType();
+        return os.str();
     }
 
     enum {
@@ -282,6 +306,7 @@ public:
         QCLASS_INTERNET = 0x0001,
         QCLASS_ANY = 0x00FF,
         QTYPE_A = 0x0001,
+        QTYPE_TXT = 0x0010,
         QTYPE_PTR = 0x000c,
         QTYPE_SRV = 0x0021,
         QTYPE_ALL = 0x00FF
@@ -308,6 +333,13 @@ public:
         os << query.domain;
         mdns_query_base &base(query);
         return os << base;
+    }
+
+    string toString() {
+        stringstream os;
+        os << domain.toString();
+        os << toStringBase();
+        return os.str();
     }
 
     const mdns_domain &getDomain() const {
@@ -340,34 +372,12 @@ public:
         is.get((char *) rdlength_, 3);
         reply.setRdlength(be16toh(rdlength_[0]));
         reply.rdata.resize(reply.getRdlength());
-        is.get((char *) reply.rdata.data(), reply.getRdlength() + 1);
+        is.get((char *) reply.rdata.data(), reply.getRdlength());
         return is;
     }
 
     friend std::ostream &operator<<(std::ostream &os, mdns_reply &reply) {
         mdns_query &query(reply);
-//        os << "reply: " << query;
-//        os << " ttl=" << reply.getTtl();
-//        os << " rdlength=" << reply.getRdlength();
-//        os << " rdata=";
-//        if (reply.getQtype() == QTYPE_A) {
-//            for (int i = 0; i < reply.getRdata().size(); ++i) {
-//                if (i)os << ".";
-//                os << (int) reply.getRdata()[i];
-//            }
-//        } else {
-//            if (reply.getQtype() == QTYPE_PTR) {
-//                os << "host_name:";
-//                for (auto c:reply.getRdata()) {
-//                    os.put(c);
-//                }
-//            } else {
-//                for (auto c:reply.getRdata()) {
-//                    os.put(c);
-//                }
-//            }
-//        }
-//        return os;
         os << query;
         unsigned int ttl[1] = {htobe32(reply.ttl)};
         os.write((const char *) ttl, 4);
@@ -375,6 +385,31 @@ public:
         os.write((const char *) rdlength, 2);
         os.write(reinterpret_cast<char *>(reply.rdata.data()), reply.rdlength);
         return os;
+    }
+
+    string toString() {
+        mdns_query &query(*this);
+        stringstream os;
+        os << "reply: " << query.toString();
+        os << " ttl=" << getTtl();
+        os << " rdlength=" << getRdlength();
+        os << " rdata=";
+        if (getQtype() == QTYPE_A) {
+            for (int i = 0; i < getRdata().size(); ++i) {
+                if (i)os << ".";
+                os << (int) getRdata()[i];
+            }
+        } else {
+            if (getQtype() == QTYPE_PTR) {
+                os << "host_name:";
+                os << mdns_domain(getRdata());
+            } else {
+                for (auto c:getRdata()) {
+                    os.put(c);
+                }
+            }
+        }
+        return os.str();
     }
 
     unsigned int getTtl() const {
@@ -481,6 +516,18 @@ public:
         for (int i = 0; i < package.replies.size(); ++i)
             os << package.replies[i];
         return os;
+    }
+
+    string toString() {
+        stringstream os;
+        os << header.toString();
+        for (int i = 0; i < queries.size(); ++i) {
+            os << queries[i].toString();
+        }
+        for (int i = 0; i < replies.size(); ++i) {
+            os << replies[i].toString();
+        }
+        return os.str();
     }
 
     const mdns_header &getHeader() const {
