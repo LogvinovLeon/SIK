@@ -19,6 +19,8 @@ public:
               tcpMeasurer(new TCPMeasurer(tcp::endpoint(ip, 22))),
               icmpMeasurer(new ICMPMeasurer(icmp::endpoint(ip, 42))) { }
 
+    Measurer(const Measurer &m) = delete;
+
     virtual ~Measurer() {
         delete udpMeasurer;
         delete tcpMeasurer;

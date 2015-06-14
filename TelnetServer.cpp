@@ -26,7 +26,7 @@ void TelnetServer::handle_accept(TelnetSession *new_session, const bs::error_cod
         new_session->start();
     }
     else {
-        std::cout << "TelnetServer::handle_accept error: " << error << std::endl;
+//        std::cout << "TelnetServer::handle_accept error: " << error << std::endl;
         delete new_session;
     }
     start_accept();

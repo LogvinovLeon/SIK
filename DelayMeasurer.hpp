@@ -28,10 +28,6 @@ public:
         for (auto delay = delays.rbegin(); delay != delays.rend() && cnt < 10; delay++, cnt++) {
             sum += *delay;
         }
-//        for (auto delay : delays) {
-//            cout << delay << " ";
-//        }
-//        cout << endl;
         return cnt ? sum / cnt : std::numeric_limits<double>::infinity();
     }
 

@@ -3,7 +3,7 @@ project(SIK_opoznienia)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wno-sign-compare -Wno-reorder")
 
-set(SOURCE_FILES main.cpp)
+set(SOURCE_FILES opoznienia.cpp)
 
 add_executable(SIK_opoznienia ${SOURCE_FILES}
 DelayMeasurer.hpp

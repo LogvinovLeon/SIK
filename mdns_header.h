@@ -32,11 +32,11 @@ public:
     }
 
 
-    mdns_header(unsigned short flags, unsigned short qdcount = 0, unsigned short ancount = 0) {
+    mdns_header(unsigned short flags_, unsigned short qdcount_ = 0, unsigned short ancount_ = 0) {
         std::fill(rep_, rep_ + sizeof(rep_), 0);
-        mdns_header::flags(flags);
-        mdns_header::qdcount(qdcount);
-        mdns_header::ancount(ancount);
+        flags(flags_);
+        qdcount(qdcount_);
+        ancount(ancount_);
     }
 
     void check() {
@@ -121,10 +121,10 @@ public:
 
     friend std::istream &operator>>(std::istream &is, mdns_domain &domain) {
         domain.parts.clear();
-        string s = mdns_domain::readString(is);
+        string s = readString(is);
         while (s.size()) {
             domain.parts.push_back(s);
-            s = mdns_domain::readString(is);
+            s = readString(is);
         }
         return is;
     }
@@ -287,9 +287,7 @@ public:
         QTYPE_ALL = 0x00FF
     };
 
-    mdns_query_base(unsigned short qtype, unsigned short qclass = 0) : qclass(qclass), qtype(qtype) { }
-
-    mdns_query_base() { }
+    mdns_query_base(unsigned short qtype = 0, unsigned short qclass = 0) : qclass(qclass), qtype(qtype) { }
 
 protected:
     unsigned short qclass;
@@ -451,7 +449,7 @@ public:
         this->setRdata(ip.to_bytes());
     }
 
-    mdns_reply() : mdns_query() { }
+    mdns_reply() : mdns_query(), ttl(0), rdlength(0), rdata({}) { }
 
 protected:
     unsigned int ttl;

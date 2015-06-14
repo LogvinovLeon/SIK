@@ -5,14 +5,14 @@
 #include <ifaddrs.h>
 
 MDNSDiscoverer::MDNSDiscoverer(MeasureManager *measureManager)
-        : measureManager(measureManager),
-          socket_(Singleton::ioService),
-          endpoint(MULTICAST_ADDRESS, MULTICAST_PORT),
-          state(CHECKING),
+        : state(CHECKING),
           id(0),
           check_name_query_timer(Singleton::ioService, QUERY_EXPIRE_TIME),
           network_discover_timer(Singleton::ioService, boost::posix_time::seconds(Singleton::vm["T"].as<uint>())),
-          ttl_checker(Singleton::ioService, boost::posix_time::seconds(1)) {
+          ttl_checker(Singleton::ioService, boost::posix_time::seconds(1)),
+          measureManager(measureManager),
+          socket_(Singleton::ioService),
+          endpoint(MULTICAST_ADDRESS, MULTICAST_PORT) {
     getIP();
     udp::endpoint listen_endpoint(LISTEN_ADDRESS, MULTICAST_PORT);
     socket_.open(listen_endpoint.protocol());
@@ -59,6 +59,7 @@ void MDNSDiscoverer::receive_handler(const boost::system::error_code &error, siz
             std::istream is(&response_buf);
             mdns_package package;
             is >> package;
+            cout << package << endl;
             process(package);
         } catch (const char *e) {
             cerr << e << endl;
@@ -101,7 +102,6 @@ void MDNSDiscoverer::respond(const mdns_package &package) {
                                                 {currentName(), "_opoznienia", "_udp", "local"}));
             }
             if (que.getQtype() == mdns_reply::QTYPE_A) {
-//                cout << "REPLY_A TTL=" << Singleton::vm["T"].as<uint>() * 3 << endl;
                 mdnsPackage.addReply(mdns_reply({currentName(), "_opoznienia", "_udp", "local"}, mdns_reply::QTYPE_A,
                                      Singleton::vm["T"].as<uint>() * 3, IP));
             }
@@ -114,7 +114,6 @@ void MDNSDiscoverer::respond(const mdns_package &package) {
                                                     {currentName(), "_ssh", "_tcp", "local"}));
                 }
                 if (que.getQtype() == mdns_reply::QTYPE_A) {
-//                    cout << "REPLY_A TTL=" << Singleton::vm["T"].as<uint>() * 3 << endl;
                     mdnsPackage.addReply(mdns_reply({currentName(), "_ssh", "_tcp", "local"}, mdns_reply::QTYPE_A,
                                          Singleton::vm["T"].as<uint>() * 3, IP));
                 }
@@ -135,33 +134,17 @@ void MDNSDiscoverer::consume_responses(const mdns_package &package) {
                 map<mdns_domain, boost::posix_time::ptime>::iterator it;
                 it = PTRrecords.find(rep.getPTRData());
                 if (it != PTRrecords.end()) {
-//                    cout << "update_PTR" << endl;
                     PTRrecords[it->first] = boost::posix_time::microsec_clock::universal_time() +
                                             boost::posix_time::seconds(rep.getTtl());
                 } else {
-//                    cout << "create_PTR" << endl;
                     PTRrecords[rep.getPTRData()] = boost::posix_time::microsec_clock::universal_time() +
                                                    boost::posix_time::seconds(rep.getTtl());
                 }
             }
             if (rep.getQtype() == mdns_reply::QTYPE_A) {
-                std::map<mdns_domain, std::pair<ba::ip::address_v4, boost::posix_time::ptime >>::iterator it;
-                it = Arecords.find(rep.getDomain());
-                if (it != Arecords.end()) {
-//                    cout << "update_A" << endl;
-                    boost::posix_time::ptime t = (boost::posix_time::microsec_clock::universal_time() +
-                                                  boost::posix_time::seconds(rep.getTtl()));
-//                    cout << boost::posix_time::to_simple_string(t) << endl;
-//                    cout << "PUT: " << (rep.getDomain()) << endl;
-                    Arecords[rep.getDomain()] = make_pair(rep.getIP(),
-                                                          boost::posix_time::microsec_clock::universal_time() +
-                                                          boost::posix_time::seconds(rep.getTtl()));
-                } else {
-//                    cout << "create_A" << endl;
-                    Arecords[rep.getDomain()] = make_pair(rep.getIP(),
-                                                          boost::posix_time::microsec_clock::universal_time() +
-                                                          boost::posix_time::seconds(rep.getTtl()));
-                }
+                Arecords[rep.getDomain()] = make_pair(rep.getIP(),
+                                                      boost::posix_time::microsec_clock::universal_time() +
+                                                      boost::posix_time::seconds(rep.getTtl()));
             }
         }
     }
@@ -171,11 +154,8 @@ void MDNSDiscoverer::consume_responses(const mdns_package &package) {
             std::map<mdns_domain, std::pair<ba::ip::address_v4, boost::posix_time::ptime>>::iterator i;
             i = Arecords.find(it.first);
             if (i == Arecords.end()) {
-//                cout << "ASK_FOR_A_EMPTY" << endl;
-//                cout << it.first << endl;
                 mdnsPackage.addQuery(mdns_query(it.first, mdns_query::QTYPE_A));
             } else if (i->second.second <= boost::posix_time::microsec_clock::universal_time()) {
-//                cout << "ASK_FOR_A" << endl;
                 mdnsPackage.addQuery(mdns_query(i->first, mdns_query::QTYPE_A));
             }
         }
@@ -189,7 +169,6 @@ void MDNSDiscoverer::send(mdns_package mdnsPackage) {
     std::ostringstream os;
     os << mdnsPackage;
     message_ = os.str();
-//    cout << message_ << endl;
     socket_.async_send_to(boost::asio::buffer(message_),
                           endpoint,
                           boost::bind(&MDNSDiscoverer::send_handler,
@@ -205,26 +184,29 @@ void MDNSDiscoverer::send_handler(const boost::system::error_code &error, size_t
 }
 
 void MDNSDiscoverer::getIP() {
-    struct ifaddrs *ifap, *ifa;
-    struct sockaddr_in *sa;
-    char *addr;
-    getifaddrs(&ifap);
-    for (ifa = ifap; ifa; ifa = ifa->ifa_next) {
-        if (ifa->ifa_addr->sa_family == AF_INET) {
-            sa = (struct sockaddr_in *) ifa->ifa_addr;
-            addr = inet_ntoa(sa->sin_addr);
-            if (strcmp(ifa->ifa_name, "usb0") == 0) {
-                IP = boost::asio::ip::address_v4::from_string(addr);
-                cout << IP.to_string() << endl;
+    struct ifaddrs *ifAddrStruct = NULL;
+    struct ifaddrs *ifa = NULL;
+    void *tmpAddrPtr = NULL;
+    getifaddrs(&ifAddrStruct);
+    for (ifa = ifAddrStruct; ifa != NULL; ifa = ifa->ifa_next) {
+        if (ifa->ifa_addr) {
+            if (ifa->ifa_addr->sa_family == AF_INET) {
+                if ((strcmp(ifa->ifa_name, "ppp0") == 0) ||
+                    (strcmp(ifa->ifa_name, "eth0") == 0) ||
+                    (strcmp(ifa->ifa_name, "wlan0") == 0)) {
+                    tmpAddrPtr = &((struct sockaddr_in *) ifa->ifa_addr)->sin_addr;
+                    char addressBuffer[INET_ADDRSTRLEN];
+                    inet_ntop(AF_INET, tmpAddrPtr, addressBuffer, INET_ADDRSTRLEN);
+                    printf("%s IP Address %s\n", ifa->ifa_name, addressBuffer);
+                }
             }
         }
     }
-    freeifaddrs(ifap);
+    if (ifAddrStruct != NULL) freeifaddrs(ifAddrStruct);
 }
 
 void MDNSDiscoverer::query_expiration_handler(const boost::system::error_code &error) {
     if (!error) {
-//        cout << currentName() << endl;
         nameChoosen();
     } else {
         if (error != boost::asio::error::operation_aborted)

@@ -18,7 +18,9 @@ class UDPMeasurer : public DelayMeasurer<udp> {
 
 public:
     UDPMeasurer(const udp::endpoint &endpoint)
-            : DelayMeasurer(endpoint) { }
+            : DelayMeasurer(endpoint) {
+        memset(data, 0, sizeof(data));
+    }
 
     void measure() {
         uint64_t time[1] = {be64toh(getTimeStamp())};

@@ -10,7 +10,9 @@ using boost::asio::ip::tcp;
 TelnetSession::TelnetSession(MeasureManager *measureManager)
         : socket_(Singleton::ioService),
           refreshTimer(Singleton::ioService, boost::posix_time::seconds(0)),
-          measureManager(measureManager) { }
+          measureManager(measureManager) {
+    memset(data, 0, sizeof(data));
+}
 
 tcp::socket &TelnetSession::socket() { return socket_; }
 
@@ -47,7 +49,7 @@ void TelnetSession::handle_write(const bs::error_code &error) {
     if (!error) {
     }
     else {
-        std::cout << "TelnetSession::handle_write error: " << error.message() << std::endl;
+//        std::cout << "TelnetSession::handle_write error: " << error.message() << std::endl;
         refreshTimer.cancel();
         delete this;
     }

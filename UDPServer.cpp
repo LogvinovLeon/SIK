@@ -15,7 +15,6 @@ UDPServer::UDPServer()
 }
 
 void UDPServer::start_receive() {
-//    cout << "start" << endl;
     socket.async_receive_from(boost::asio::buffer(data, 8),
                               endpoint,
                               boost::bind(&UDPServer::handle_receive,
@@ -25,7 +24,6 @@ void UDPServer::start_receive() {
 }
 
 void UDPServer::handle_receive(const boost::system::error_code &error, size_t len) {
-//    cout << "receive" << endl;
     if (!error) {
         assert(len == 8);
         uint64_t time[2];
