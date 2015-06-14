@@ -47,7 +47,7 @@ private:
                                                    boost::asio::placeholders::error,
                                                    boost::asio::placeholders::bytes_transferred));
         } else {
-            cerr << ec.message() << endl;
+            cerr << "UDP: " << ec.message() << endl;
         }
     }
 

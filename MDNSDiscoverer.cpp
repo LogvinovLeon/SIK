@@ -92,16 +92,20 @@ void MDNSDiscoverer::process(const mdns_package &package) {
 }
 
 void MDNSDiscoverer::respond(const mdns_package &package) {
+    cout << "START_REPLY" << endl;
     mdns_package mdnsPackage(mdns_header(mdns_header::response_authoritative));
     for (auto que: package.getQueries()) {
         auto domain = que.getDomain();
         if (domain.getType() == "_opoznienia" && domain.getProtocol() == "_udp") {
             if (que.getQtype() == mdns_reply::QTYPE_PTR) {
+                cout << "reply_ptr" << endl;
                 mdnsPackage.addReply(mdns_reply(OPOZNIENIA, mdns_reply::QTYPE_PTR,
                                                 Singleton::vm["T"].as<uint>() * 3,
                                                 {currentName(), "_opoznienia", "_udp", "local"}));
             }
             if (que.getQtype() == mdns_reply::QTYPE_A) {
+                cout << "reply_a" << endl;
+                cout << "RESPOND_IP " << IP.to_string() << endl;
                 mdnsPackage.addReply(mdns_reply({currentName(), "_opoznienia", "_udp", "local"}, mdns_reply::QTYPE_A,
                                      Singleton::vm["T"].as<uint>() * 3, IP));
             }
@@ -109,11 +113,13 @@ void MDNSDiscoverer::respond(const mdns_package &package) {
         if (Singleton::vm["s"].as<bool>()) {
             if (domain.getType() == "_ssh" && domain.getProtocol() == "_tcp") {
                 if (que.getQtype() == mdns_reply::QTYPE_PTR) {
+                    cout << "reply_ptr" << endl;
                     mdnsPackage.addReply(mdns_reply(SSH, mdns_reply::QTYPE_PTR,
                                                     Singleton::vm["T"].as<uint>() * 3,
                                                     {currentName(), "_ssh", "_tcp", "local"}));
                 }
                 if (que.getQtype() == mdns_reply::QTYPE_A) {
+                    cout << "reply_a" << endl;
                     mdnsPackage.addReply(mdns_reply({currentName(), "_ssh", "_tcp", "local"}, mdns_reply::QTYPE_A,
                                          Singleton::vm["T"].as<uint>() * 3, IP));
                 }
@@ -121,6 +127,7 @@ void MDNSDiscoverer::respond(const mdns_package &package) {
         }
     }
     if (mdnsPackage.getReplies().size()) {
+        cout << "RESPONDING: " << mdnsPackage.toString() << endl;
         send(mdnsPackage);
     }
 }
@@ -142,6 +149,7 @@ void MDNSDiscoverer::consume_responses(const mdns_package &package) {
                 }
             }
             if (rep.getQtype() == mdns_reply::QTYPE_A) {
+                cout << "NEW_IP " << rep.getIP().to_string() << endl;
                 Arecords[rep.getDomain()] = make_pair(rep.getIP(),
                                                       boost::posix_time::microsec_clock::universal_time() +
                                                       boost::posix_time::seconds(rep.getTtl()));

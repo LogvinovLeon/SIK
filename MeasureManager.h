@@ -8,7 +8,6 @@
 #include <boost/asio.hpp>
 #include <boost/date_time.hpp>
 #include "Measurer.h"
-#include "Endpoint.h"
 
 namespace ba = boost::asio;
 using std::vector;

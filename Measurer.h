@@ -9,7 +9,6 @@
 #include "ICMPMeasurer.h"
 #include "UDPMeasurer.h"
 #include "TCPMeasurer.h"
-#include "Endpoint.h"
 #include <boost/asio.hpp>
 
 class Measurer {
@@ -22,15 +21,15 @@ public:
     Measurer(const Measurer &m) = delete;
 
     virtual ~Measurer() {
-        delete udpMeasurer;
+//        delete icmpMeasurer;
         delete tcpMeasurer;
-        delete icmpMeasurer;
+        delete udpMeasurer;
     }
 
     void measure() {
         udpMeasurer->measure();
         tcpMeasurer->measure();
-        icmpMeasurer->measure();
+//        icmpMeasurer->measure();
     }
 
     tuple<double, double, double> getDelays() const {

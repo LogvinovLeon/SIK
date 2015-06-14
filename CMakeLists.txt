@@ -12,7 +12,6 @@ ICMPHeader.hpp
 ICMPMeasurer.h
 Measurer.h
 MeasureManager.h
-Endpoint.h
 TelnetServer.h
 TelnetServer.cpp
 TelnetSession.cpp

@@ -21,6 +21,10 @@ public:
         startReceive();
     }
 
+    virtual ~ICMPMeasurer() {
+        socket_.cancel();
+    }
+
 private:
 public:
     virtual void measure() {
@@ -46,7 +50,7 @@ public:
         if (!ec) {
 
         } else {
-            cerr << ec.message() << endl;
+            cerr << "ERROR: " << ec.message() << " " << ec.value() << endl;
         }
     }
 

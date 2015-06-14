@@ -12,6 +12,8 @@
 #include <algorithm>
 #include <assert.h>
 #include <memory.h>
+#include <sstream>
+#include <boost/asio/ip/address_v4.hpp>
 
 using namespace std;
 const unsigned int HEADER_LENGTH = 12;
@@ -115,6 +117,9 @@ public:
         string s;
         unsigned char len[1];
         is.get((char *) len, 2);
+        if (len[0] >= 64) {
+            throw "compressed";
+        }
         for (auto i = 0; i < len[0]; ++i) {
             char c;
             is.get(c);
@@ -134,7 +139,14 @@ public:
     }
 
     static void writeString(std::ostream &os, string s) {
-        os << "." << s;
+        os << ".";
+        for (auto c: s) {
+            if (isprint(c)) {
+                os.put(c);
+            } else {
+                os.put('.');
+            }
+        }
     }
 
     friend std::ostream &operator<<(std::ostream &os, const mdns_domain &domain) {
@@ -371,8 +383,10 @@ public:
         unsigned short rdlength_[1];
         is.get((char *) rdlength_, 3);
         reply.setRdlength(be16toh(rdlength_[0]));
+        reply.rdata.resize(reply.getRdlength() + 1);
+        cout << "LENGTH: " << reply.getRdlength() << endl;
+        is.get((char *) reply.rdata.data(), reply.getRdlength() + 1);
         reply.rdata.resize(reply.getRdlength());
-        is.get((char *) reply.rdata.data(), reply.getRdlength());
         return is;
     }
 
@@ -396,7 +410,8 @@ public:
         os << " rdata=";
         if (getQtype() == QTYPE_A) {
             for (int i = 0; i < getRdata().size(); ++i) {
-                if (i)os << ".";
+                if (i)
+                    os << ".";
                 os << (int) getRdata()[i];
             }
         } else {
@@ -405,7 +420,10 @@ public:
                 os << mdns_domain(getRdata());
             } else {
                 for (auto c:getRdata()) {
-                    os.put(c);
+                    if (isprint(c))
+                        os.put(c);
+                    else
+                        os.put('.');
                 }
             }
         }
